@@ -132,6 +132,7 @@ dmypy.json
 config/config.ini
 data/pending_recruitment.json
 main.py
+.idea/
 
 Procfile
 runtime.txt
