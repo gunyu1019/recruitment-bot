@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import discord
 from discord.ext import interaction
@@ -34,7 +35,9 @@ class Basic:
             description='https://c11.kr/11j0i',
             colour=self.color
         )
-        await ctx.send(embed=embed)
+        message = await ctx.send(embed=embed)
+        await asyncio.sleep(10)
+        await message.delete()
 
     @interaction.command(name="핑")
     async def ping(self, ctx: interaction.ApplicationContext):
@@ -43,7 +46,9 @@ class Basic:
             description='현재 핑입니다.',
             colour=self.color
         )
-        await ctx.send(embed=embed)
+        message = await ctx.send(embed=embed)
+        await asyncio.sleep(10)
+        await message.delete()
 
 
 def setup(client: interaction.Client):

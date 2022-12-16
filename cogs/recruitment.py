@@ -182,6 +182,11 @@ class Recruitment:
             "origin_message": message
         }
         self.save_pending_recruitment()
+
+        await asyncio.sleep(1800)
+        await message.delete()
+        self.pending_recruitment.pop(voice_channel.id)
+        self.save_pending_recruitment()
         return
 
     @interaction.listener()
@@ -224,9 +229,11 @@ class Recruitment:
         original_message: interaction.Message = data["original_message"]
         components: List[interaction.ActionRow] = original_message.components
         if len(voice_channel.members) < 1 or len(voice_channel.members) >= voice_channel.user_limit != 0:
-            components[0].components[0].disabled = True
+            # components[0].components[0].disabled = True
             self.pending_recruitment.pop(voice_channel.id)
             self.save_pending_recruitment()
+            await message.delete()
+            return
 
         for (index, value) in enumerate(original_message.embeds[0].fields):
             if value.name == "멤버":
