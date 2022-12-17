@@ -223,7 +223,9 @@ class Recruitment:
         }
         self.save_pending_recruitment()
 
-        await asyncio.sleep(1800)
+        await asyncio.sleep(
+            parser.getint("DelayDelete", "pending_recruitment")
+        )
         await message.delete()
         self.pending_recruitment.pop(voice_channel.id)
         self.save_pending_recruitment()

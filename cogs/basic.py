@@ -36,7 +36,9 @@ class Basic:
             colour=self.color
         )
         message = await ctx.send(embed=embed)
-        await asyncio.sleep(10)
+        await asyncio.sleep(
+            parser.getint("DelayDelete", "invite")
+        )
         await message.delete()
 
     @interaction.command(name="핑")
@@ -47,7 +49,9 @@ class Basic:
             colour=self.color
         )
         message = await ctx.send(embed=embed)
-        await asyncio.sleep(10)
+        await asyncio.sleep(
+            parser.getint("DelayDelete", "ping")
+        )
         await message.delete()
 
 
