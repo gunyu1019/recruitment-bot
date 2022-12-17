@@ -1,17 +1,20 @@
 import asyncio
+import datetime
 import json
+import copy
 import os
 
 import discord
 from discord.state import ConnectionState
 from discord.ext import interaction
-from typing import Union, List
+from typing import Union, List, Dict
 
 from config.config import get_config
 from utils.directory import directory
 
 parser = get_config("config")
 comment_parser = get_config("comment")
+data_type = Union[str, discord.Guild, discord.Member, discord.TextChannel, discord.PartialMessage, datetime.datetime]
 
 
 class Recruitment:
@@ -31,7 +34,8 @@ class Recruitment:
 
     @interaction.listener()
     async def on_ready(self):
-        self.load_pending_recruitment()
+        pending_recruitment_from_data = self.load_pending_recruitment()
+        await self.pending_recruitment_init(pending_recruitment_from_data)
 
     def voice_channel_formatter(self, regex: str, info: discord.VoiceChannel):
         return regex.format(
@@ -66,13 +70,15 @@ class Recruitment:
                 "requester": value["requester"].id,
                 "guild": value["guild"].id,
                 "channel": value["channel"].id,
-                "message": value["message"].id
+                "message": value["message"].id,
+                "created_at": value["created_at"].timestamp()
             }
         with open(os.path.join(directory, "data", "pending_recruitment.json"), mode="w") as fp:
             fp.write(json.dumps(_pending_recruitment, indent=4))
         return
 
-    def load_pending_recruitment(self):
+    def load_pending_recruitment(self) -> List[Dict[str, data_type]]:
+        pending_recruitment_from_data = []
         with open(os.path.join(directory, "data", "pending_recruitment.json"), mode="r") as fp:
             _pending_recruitment = json.load(fp)
             for (key, value) in _pending_recruitment.items():
@@ -80,12 +86,45 @@ class Recruitment:
                 requester: discord.Member = guild.get_member(value["requester"])
                 channel: discord.TextChannel = guild.get_channel(value["channel"])
                 message = channel.get_partial_message(value["message"])
-                self.pending_recruitment[key] = {
+                _datetime = datetime.datetime.fromtimestamp(value["created_at"], tz=datetime.timezone.utc)
+                data = {
                     "requester": requester,
                     "guild": guild,
                     "channel": channel,
-                    "message": message
+                    "message": message,
+                    "create_at": _datetime
                 }
+                self.pending_recruitment[key] = data
+                pending_recruitment_from_dt = copy.copy(data)
+                pending_recruitment_from_dt["voice_channel"] = key
+                pending_recruitment_from_data.append(pending_recruitment_from_dt)
+        return pending_recruitment_from_data
+
+    async def pending_recruitment_init(self, pending_recruitment):
+        pending_recruitment_from_data = copy.copy(pending_recruitment)
+        if len(pending_recruitment_from_data) > 0:
+            pending_recruitment_from_data = sorted(pending_recruitment_from_data, key=lambda it: it["create_at"].timestamp())
+            pending_recruitment_from_data.reverse()
+
+            item = pending_recruitment_from_data.pop()
+            while True:
+                datetime_now = datetime.datetime.now(tz=datetime.timezone.utc)
+                if item["create_at"].timestamp() + 30 - datetime_now.timestamp() < 0:
+                    try:
+                        await item["message"].delete()
+                        self.pending_recruitment.pop(item["voice_channel"])
+                    except discord.NotFound:
+                        pass
+
+                    if len(pending_recruitment_from_data) < 1:
+                        self.save_pending_recruitment()
+                        break
+                    else:
+                        item = pending_recruitment_from_data.pop()
+
+                sleep_time = item["create_at"].timestamp() + 30 - datetime_now.timestamp()
+                if sleep_time > 0:
+                    await asyncio.sleep(sleep_time)
 
     @interaction.command(name="구인", description="배틀그라운드를 함께할 플레이어를 모집해보세요!")
     async def recruitment(self, ctx: interaction.ApplicationContext):
@@ -179,7 +218,8 @@ class Recruitment:
             "guild": ctx.guild,
             "channel": ctx.channel,
             "message": message,
-            "origin_message": message
+            "origin_message": message,
+            "created_at": message.created_at
         }
         self.save_pending_recruitment()
 
