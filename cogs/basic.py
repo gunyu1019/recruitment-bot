@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import datetime
 import discord
 from discord.ext import interaction
 from config.config import get_config
@@ -28,7 +29,7 @@ class Basic:
         else:
             logger_command.info(f"(DM채널 | {ctx.author}) {ctx.content}")
 
-    @interaction.command(name="초대링크")
+    @interaction.command(name="초대링크", description="초대링크를 불러옵니다.")
     async def invite(self, ctx: interaction.ApplicationContext):
         embed = discord.Embed(
             title='구인구직봇 초대링크',
@@ -41,14 +42,30 @@ class Basic:
         )
         await message.delete()
 
-    @interaction.command(name="핑")
+    @interaction.command(name="핑", description="봇의 응답 속도를 불러옵니다.")
     async def ping(self, ctx: interaction.ApplicationContext):
+        datetime_now_for_read = datetime.datetime.now(tz=datetime.timezone.utc)
         embed = discord.Embed(
-            title=f'{round(self.client.latency * 1000)}ms',
-            description='현재 핑입니다.',
+            title='현재 핑 입니다.',
             colour=self.color
         )
+        embed.add_field(name="지연 속도", value=f'{round(self.client.latency * 1000)}ms', inline=True)
+        embed.add_field(
+            name="응답 속도",
+            value=f'읽기 속도: {abs(round((ctx.created_at - datetime_now_for_read).total_seconds() * 1000))}ms',
+            inline=True
+        )
         message = await ctx.send(embed=embed)
+        datetime_now_for_write = datetime.datetime.now(tz=datetime.timezone.utc)
+
+        embed.set_field_at(
+            index=1,
+            name=embed.fields[1].name,
+            value=f'{embed.fields[1].value}\n'
+                  f'쓰기 속도: : {abs(round((datetime_now_for_write - message.created_at).total_seconds() * 1000))}ms',
+            inline=embed.fields[1].inline
+        )
+        await message.edit(embed=embed)
         await asyncio.sleep(
             parser.getint("DelayDelete", "ping")
         )
