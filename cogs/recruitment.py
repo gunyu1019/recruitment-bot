@@ -190,7 +190,7 @@ class Recruitment:
             title=comment_parser.get("Recruitment", "embed_title"),
             description=self.author_formatter(comment_parser.get("Recruitment", "embed_description"), ctx.author)
         )
-        category = ctx.channel.category
+        category = voice_channel.category
         if category is not None:
             embed.add_field(name="카테고리", value=category.name, inline=False)
         embed.add_field(name="채널명", value=voice_channel.mention, inline=True)
